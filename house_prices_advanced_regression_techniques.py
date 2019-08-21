@@ -66,7 +66,8 @@ def process_features(train, test):
 
     for column in features.select_dtypes(exclude='object').columns:
         features[column]= boxcox1p(features[column], boxcox_normmax(features[column]+1))
-        #features[column] = np.log(features[column] + 1)
+        features[column + '_log'] = np.log(features[column] + 1)
+        features[column + '_log_square'] = np.log(features[column] + 1) ** 2
 
     assert features.isnull().sum().sum() == 0
     return pd.get_dummies(features)
@@ -135,19 +136,26 @@ class Model:
         self._rmse = {model: [] for model in self.models.keys()}
     
     def fit(self, train_features, train_target):
-        n = 5
-        for index in range(n):
-            features, target, features_, target_ = self._split(train_features, train_target, n, index)
-            for cls, params in self.models.items():
-                model = cls(**params)
-                model.fit(features, target)
-                predicted_target_ = model.predict(features_)
-                self._models[cls].append(model)
-                self._rmse[cls].append(self.rmse(target_, predicted_target_))
+        from sklearn.model_selection import train_test_split
+        
+        for cls, params in self.models.items():
+            model = cls(**params)
+            model.fit(train_features, train_target)
+            self._models[cls].append(model)
+        
+        #n = 2
+        #for index in range(n):
+        #    features, target, features_, target_ = self._split(train_features, train_target, n, index)
+        #    for cls, params in self.models.items():
+        #        model = cls(**params)
+        #        model.fit(features, target)
+        #        predicted_target_ = model.predict(features_)
+        #        self._models[cls].append(model)
+        #        self._rmse[cls].append(self.rmse(target_, predicted_target_))
                 
-        for cls in self.models.keys():
-            print(cls)
-            print(self._rmse[cls])
+        #for cls in self.models.keys():
+        #    print(cls)
+        #    print(self._rmse[cls])
             
     def predict(self, features):
         result = []
